@@ -1,7 +1,5 @@
-customtkinter
+streamlit
 g4f
+pymupdf
 pandas
 openpyxl
-pymupdf
-python-docx
-pillow
