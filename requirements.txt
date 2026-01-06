@@ -1,0 +1,7 @@
+customtkinter
+g4f
+pandas
+openpyxl
+pymupdf
+python-docx
+pillow
