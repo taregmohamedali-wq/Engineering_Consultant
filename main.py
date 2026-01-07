@@ -4,7 +4,7 @@ import fitz  # PyMuPDF
 from g4f.client import Client
 import io
 
-# 1. إعدادات الصفحة والواجهة (ثابتة تماماً كما طلبت)
+# 1. إعدادات الصفحة (الحفاظ على الهوية البصرية الداكنة)
 st.set_page_config(page_title="UAE Engineering Auditor Pro", layout="wide", page_icon="🏗️")
 
 lang_data = {
@@ -12,19 +12,19 @@ lang_data = {
         "sidebar_title": "Control Panel",
         "region_label": "Project Location (Emirate)",
         "title": "🏗️ Full Technical Compliance & Precise Gap Auditor",
-        "run_btn": "🚀 Run Ultra-Deep Audit (Clause-by-Clause)",
-        "table_header": "Ultra-Precise Compliance, Differences & Gap Analysis",
-        "down_btn": "📥 Download Detailed Audit (Excel)",
-        "processing": "Performing deep scanning of all clauses... Please wait."
+        "run_btn": "🚀 Run Deep Item-by-Item Audit",
+        "table_header": "Detailed Compliance, Differences & Gaps Report",
+        "down_btn": "📥 Download Full Report (Excel)",
+        "processing": "Analyzing all clauses... comparing Specs vs Offer."
     },
     "العربية": {
         "sidebar_title": "لوحة التحكم",
         "region_label": "موقع المشروع (الإمارة)",
-        "title": "🏗️ مدقق المطابقة الفنية وحصر النواقص ",
-        "run_btn": "🚀 بدء التدقيق العميق (بند مقابل بند)",
-        "table_header": "تقرير تحليل المطابقة، الفروقات، والنواقص التفصيلي",
-        "down_btn": "📥 تحميل التقرير التفصيلي (Excel)",
-        "processing": "جاري المسح الشامل لكل بند وتحليل الفروقات بدقة... يرجى الانتظار."
+        "title": "🏗️ مدقق المطابقة الفنية وحصر النواقص",
+        "run_btn": "🚀 بدء التدقيق العميق",
+        "table_header": "تقرير تحليل المطابقة الكاملة، الاختلافات، والنواقص",
+        "down_btn": "📥 تحميل التقرير الشامل (Excel)",
+        "processing": "جاري مراجعة كل بند (الموجود والمفقود)... يرجى الانتظار."
     }
 }
 
@@ -35,6 +35,7 @@ municipalities_db = {
     "Other Emirates": {"auth": "UAE Authority", "std": "General Code"}
 }
 
+# --- القائمة الجانبية (Sidebar) ---
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Flag_of_the_United_Arab_Emirates.svg/255px-Flag_of_the_United_Arab_Emirates.svg.png", width=100)
     ui_lang = st.selectbox("Language / اللغة", ["العربية", "English"])
@@ -42,78 +43,74 @@ with st.sidebar:
     st.divider()
     selected_region = st.selectbox(txt["region_label"], list(municipalities_db.keys()))
     current = municipalities_db[selected_region]
-    st.success(f"📍 Region Set: {current['auth']}")
+    st.success(f"📍 Standard: {current['auth']}")
 
 st.title(txt["title"])
 
 col1, col2 = st.columns(2)
 with col1:
-    specs_file = st.file_uploader("1. Reference Specs (المواصفات المرجعية)", type=['pdf'])
+    specs_file = st.file_uploader("1. Reference Specs (ملف المواصفات)", type=['pdf'])
 with col2:
     offer_file = st.file_uploader("2. Technical Offer (العرض الفني)", type=['pdf'])
 
-def extract_full_text(file):
+def extract_text(file):
     doc = fitz.open(stream=file.read(), filetype="pdf")
     return " ".join([page.get_text() for page in doc])
 
-# 3. محرك التدقيق فائق الدقة (Ultra-Deep Audit)
+# 3. محرك التدقيق (يستخرج المطابق وغير المطابق)
 if st.button(txt["run_btn"]):
     if specs_file and offer_file:
         progress_bar = st.progress(0)
         status_msg = st.empty()
         
         status_msg.info(txt["processing"])
-        specs_txt = extract_full_text(specs_file)[:20000] # زيادة سعة المسح
+        specs_txt = extract_text(specs_file)[:20000]
         progress_bar.progress(30)
         
-        offer_txt = extract_full_text(offer_file)[:20000]
+        offer_txt = extract_text(offer_file)[:20000]
         progress_bar.progress(60)
         
         client = Client()
         
-        # برومبت صارم جداً يجبر على مراجعة "كل" بند ويوضح الفروقات والمفقودات
+        # برومبت يركز على استخراج "كل شيء" وتوضيح رقم واسم المواصفة
         prompt = f"""
-        Act as a Senior UAE Technical Auditor for {current['auth']}.
-        You MUST perform an ULTRA-PRECISE comparison between 'Specs' and 'Offer'.
-
-        CORE REQUIREMENTS:
-        1. REVIEW EVERY SINGLE CLAUSE found in the Specs text. DO NOT SUMMARIZE.
-        2. If a clause is missing in the offer, mark as 'STRICTLY MISSING'.
-        3. If it exists but differs (different material, brand, or capacity), explain the EXACT technical difference.
-        4. Provide local UAE alternatives (e.g., Ducab, Schneider) and real price ranges in AED.
-        5. Provide a professional 'Municipality-Standard' recommendation for each gap.
+        Act as a Senior UAE Engineering Auditor. 
+        TASK: Compare EVERY Clause in 'Specs' against 'Offer'.
+        
+        OUTPUT RULES:
+        1. List BOTH: Items that are found (Compliant) and items that are missing (Not Provided).
+        2. Column 'Clause_Name_No': Extract the exact Number and Title from Specs (e.g., 260519 - Cables).
+        3. Column 'Status': Mark as 'COMPLIANT' if found, 'PARTIAL' if different, or 'STRICTLY MISSING' if absent.
+        4. Column 'Difference_Details': If status is Compliant, write 'Fully Matches'. If not, explain why.
+        5. For ALL items (even missing), provide UAE market alternatives and AED price ranges.
 
         COLUMNS:
-        Clause_No; Specs_Requirement; Offer_Response; Status; Technical_Difference; Best_Alternatives_UAE; Price_Range_AED; Recommended_Solution.
+        Clause_Name_No; Specs_Requirement; Offer_Response; Status; Difference_Details; Best_Alternatives_UAE; Price_Range_AED; Expert_Recommendation.
 
-        OUTPUT: Return ONLY a CSV table using (;) separator. No text before or after.
+        Separator: (;)
         Language: {ui_lang}.
         """
         
         try:
-            response = client.chat.completions.create(
-                model="", 
-                messages=[{"role": "user", "content": f"{prompt}\nSpecs Data: {specs_txt}\nOffer Data: {offer_txt}"}]
-            )
+            response = client.chat.completions.create(model="", messages=[{"role": "user", "content": f"{prompt}\nSpecs: {specs_txt}\nOffer: {offer_txt}"}])
             raw_data = response.choices[0].message.content
             
-            if "Clause_No" in raw_data:
-                clean_csv = raw_data[raw_data.find("Clause_No"):].strip()
+            if "Clause_Name_No" in raw_data:
+                clean_csv = raw_data[raw_data.find("Clause_Name_No"):].strip()
                 df = pd.read_csv(io.StringIO(clean_csv), sep=';', on_bad_lines='skip')
                 
-                # إكمال شريط التقدم
                 progress_bar.progress(100)
                 status_msg.empty()
                 
-                # 4. عرض التقرير النهائي بنفس التنسيق المعتمد
+                # عرض النتائج بالشكل المعتمد
                 st.subheader(txt["table_header"])
                 st.dataframe(df, use_container_width=True)
 
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df.to_excel(writer, index=False)
-                st.download_button(txt["down_btn"], output.getvalue(), "Ultra_Deep_Audit_Report.xlsx")
+                st.download_button(txt["down_btn"], output.getvalue(), "Detailed_Engineering_Audit.xlsx")
             else:
-                st.error("AI Error: Could not generate a structured table. Please ensure the PDFs contain readable text.")
+                st.error("AI Error: Analysis was not structured correctly. Please try again.")
         except Exception as e:
-            st.error(f"Audit failed: {e}")
+            st.error(f"Error: {e}")
