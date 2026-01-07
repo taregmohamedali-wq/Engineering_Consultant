@@ -4,28 +4,28 @@ import fitz  # PyMuPDF
 from g4f.client import Client
 import io
 
-# 1. إعدادات الصفحة (الحفاظ على الشكل العام)
+# 1. إعدادات الصفحة (الحفاظ على الهوية البصرية)
 st.set_page_config(page_title="UAE Engineering Auditor Pro", layout="wide", page_icon="🏗️")
 
-# 2. قاموس الواجهة
+# 2. قاموس الواجهة لضمان ثبات الشكل
 lang_data = {
     "English": {
         "sidebar_title": "Control Panel",
         "region_label": "Project Location (Emirate)",
-        "title": "🏗️ Full Technical Compliance & Clause Auditor",
+        "title": "🏗️ Full Technical Compliance & Gap Auditor",
         "run_btn": "🚀 Run Item-by-Item Audit",
-        "table_header": "Detailed Clause-by-Clause Compliance Report",
-        "down_btn": "📥 Download Full Audit (Excel)",
-        "processing": "Auditing every single clause... Please wait."
+        "table_header": "Complete Compliance, Differences & Market Analysis Report",
+        "down_btn": "📥 Download Full Report (Excel)",
+        "processing": "Auditing all clauses... analyzing differences."
     },
     "العربية": {
         "sidebar_title": "لوحة التحكم",
         "region_label": "موقع المشروع (الإمارة)",
-        "title": "🏗️ مدقق المطابقة الفنية ومراجعة البنود الشامل",
-        "run_btn": "🚀 بدء تدقيق البنود (بند بند)",
-        "table_header": "تقرير مطابقة ومراجعة كافة البنود التفصيلي",
+        "title": "🏗️ مدقق المطابقة الفنية وحصر النواقص الشامل",
+        "run_btn": "🚀 بدء التدقيق الشامل (بند بند)",
+        "table_header": "تحليل المطابقة الكاملة، الاختلافات الفنية، والتسعير",
         "down_btn": "📥 تحميل التقرير الشامل (Excel)",
-        "processing": "جاري مراجعة كل بند من المواصفات... يرجى الانتظار."
+        "processing": "جاري تدقيق كافة البنود وتحليل الفروقات... يرجى الانتظار."
     }
 }
 
@@ -44,13 +44,13 @@ with st.sidebar:
     st.divider()
     selected_region = st.selectbox(txt["region_label"], list(municipalities_db.keys()))
     current = municipalities_db[selected_region]
-    st.info(f"📍 Standard Applied: {current['auth']}")
+    st.success(f"📍 Standard: {current['auth']}")
 
 st.title(txt["title"])
 
 col1, col2 = st.columns(2)
 with col1:
-    specs_file = st.file_uploader("1. Reference Specs (ملف المواصفات)", type=['pdf'])
+    specs_file = st.file_uploader("1. Reference Specs (المواصفات)", type=['pdf'])
 with col2:
     offer_file = st.file_uploader("2. Technical Offer (العرض الفني)", type=['pdf'])
 
@@ -58,14 +58,14 @@ def extract_text(file):
     doc = fitz.open(stream=file.read(), filetype="pdf")
     return "".join([page.get_text() for page in doc])
 
-# 3. محرك المراجعة التفصيلية لكل بند
+# 3. محرك التدقيق (يظهر المطابق والمختلف والمفقود)
 if st.button(txt["run_btn"]):
     if specs_file and offer_file:
         progress_bar = st.progress(0)
         status_msg = st.empty()
         
-        status_msg.warning(txt["processing"])
-        specs_txt = extract_text(specs_file)[:18000] # زيادة سعة القراءة للمراجعة الشاملة
+        status_msg.info(txt["processing"])
+        specs_txt = extract_text(specs_file)[:18000]
         progress_bar.progress(30)
         
         offer_txt = extract_text(offer_file)[:15000]
@@ -73,24 +73,24 @@ if st.button(txt["run_btn"]):
         
         client = Client()
         
-        # برومبت يركز على رقم البند ومراجعة كل البنود بدون استثناء
+        # برومبت صارم لاستخراج كل شيء (المطابق، المختلف، والمفقود)
         prompt = f"""
-        Act as a Senior UAE Engineering Auditor.
-        COMPARE Specs vs Offer MANDATORY Item-by-Item.
+        Act as a Senior UAE Engineering Auditor for {current['auth']}.
+        Analyze Specs against Offer Item-by-Item. 
+        MANDATORY: List EVERY clause from the Specs.
 
-        ANALYSIS STEPS:
-        1. Extract EVERY Clause Number (e.g., 260519, 1.1.2) and Title.
-        2. Check if it exists in the Technical Offer.
-        3. If missing, write 'MISSING / NOT PROVIDED' and provide a solution.
-        4. Provide UAE Market Pricing and Recommendations for ALL items.
+        JUDGMENT CRITERIA:
+        - COMPLIANT: Exact match.
+        - DIFFERENT: Exists but differs in brand/tech-specs (Explain what is different).
+        - MISSING: Not mentioned in the offer.
 
-        COLUMNS (Strictly follow this order):
-        Clause_No; Specs_Requirement; Offer_Response; Compliance_Status; Technical_Difference; Price_Range_AED; Recommendation.
+        COLUMNS (Strictly):
+        Clause_No; Specs_Requirement; Offer_Response; Status; Difference_Details; UAE_Alternative_Market; Price_AED_Range; AI_Expert_Recommendation.
 
-        Format: Return ONLY a CSV table with (;) separator.
-        NO 'N/A' - NO 'None'.
+        RULES: 
+        - NEVER leave cells empty. Use AI logic to fill Prices and Alternatives.
+        - Return ONLY a CSV table with (;) separator.
         Language: {ui_lang}.
-        Standard: {current['auth']}.
         """
         
         try:
@@ -101,21 +101,21 @@ if st.button(txt["run_btn"]):
                 clean_csv = raw_data[raw_data.find("Clause_No"):].strip()
                 df = pd.read_csv(io.StringIO(clean_csv), sep=';', on_bad_lines='skip')
                 
-                # ملء أي فراغات ناتجة عن التحليل لضمان وضوح التقرير
-                df.fillna("Under Evaluation", inplace=True)
+                # ملء الفراغات لضمان مظهر جدول مكتمل
+                df.fillna("Standard Analysis Applied", inplace=True)
                 
                 progress_bar.progress(100)
-                status_msg.success("Audit Completed Successfully!")
+                status_msg.empty()
                 
-                # 4. عرض الجدول بالشكل العام المعتمد
+                # 4. عرض التقرير بالشكل النهائي المعتمد
                 st.subheader(txt["table_header"])
                 st.dataframe(df, use_container_width=True)
 
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df.to_excel(writer, index=False)
-                st.download_button(txt["down_btn"], output.getvalue(), "Engineering_Full_Audit.xlsx")
+                st.download_button(txt["down_btn"], output.getvalue(), "Technical_Audit_Comprehensive.xlsx")
             else:
-                st.error("Format Error: AI could not structure the clauses. Please try again.")
+                st.error("Error: The AI response was not structured correctly. Please try again.")
         except Exception as e:
             st.error(f"Error: {e}")
