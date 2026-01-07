@@ -41,53 +41,62 @@ if st.button("🚀 Run Deep Audit & Price Check"):
         progress_bar = st.progress(0)
         status = st.empty()
         
-        status.text("Deep scanning PDF pages...")
-        specs_txt = extract_text(specs_file)[:10000] # زيادة حجم النص للقراءة الشاملة
+        status.text("Reading engineering documents...")
+        specs_txt = extract_text(specs_file)[:10000]
         offer_txt = extract_text(offer_file)[:10000]
         progress_bar.progress(30)
         
-        status.text(f"Searching for {selected_emirate} market prices & alternatives...")
+        status.text("AI is generating the structured table...")
         client = Client()
         
-        # برومبت مكثف لإجبار الـ AI على وضع الأسعار والبدائل
+        # التعديل هنا لضمان خروج البيانات بتنسيق يفهمه البرنامج ويحوله لجدول
         prompt = f"""
-        ACT AS A SENIOR UAE COST CONSULTANT. 
-        MANDATORY REQUIREMENT: For every technical item, you MUST provide:
-        1. A real local alternative available in UAE (e.g., Ducab, Riyadh Cables, Schneider UAE).
-        2. A realistic ESTIMATED UNIT PRICE in AED based on current market trends in {selected_emirate}.
+        Act as a Senior UAE Engineering Auditor. 
+        Compare Specs vs Offer and return a CSV table using (;) as a separator.
+        IMPORTANT: Do not include any text or markers like (|) outside the CSV format.
         
-        TABLE FORMAT: Use (;) as separator ONLY. 
         Columns: Item_Ref; Specs_Requirement; Offer_Response; Status; UAE_Local_Alternatives; Price_AED_Est; Auditor_Note.
         
-        Language: {report_lang}.
-        Audit every single section in the provided Specs: {specs_txt}
-        Compare with Offer: {offer_txt}
+        Requirements:
+        1. Review every technical item from the specs.
+        2. Provide REAL UAE alternatives (e.g., Ducab, Schneider, ABB).
+        3. Provide realistic ESTIMATED prices in AED.
+        4. Language: {report_lang}.
+        
+        Specs: {specs_txt}
+        Offer: {offer_txt}
         """
         
         try:
             response = client.chat.completions.create(model="", messages=[{"role": "user", "content": prompt}])
             raw_data = response.choices[0].message.content
             
+            # معالجة النص لضمان تحويله لجدول (DataFrame)
             if "Item_Ref" in raw_data:
-                csv_clean = raw_data[raw_data.find("Item_Ref"):]
-                df = pd.read_csv(io.StringIO(csv_clean), sep=';', on_bad_lines='skip')
+                # تنظيف أي رموز زائدة قد تضعها بعض موديلات الـ AI
+                clean_csv = raw_data[raw_data.find("Item_Ref"):].replace('|', '').strip()
                 
-                # إجبار الخانات الفارغة على التعبئة (اختياري لضمان المظهر)
-                df.fillna("Check Market Price", inplace=True)
+                # قراءة البيانات كجدول
+                df = pd.read_csv(io.StringIO(clean_csv), sep=';', on_bad_lines='skip')
                 
                 progress_bar.progress(100)
-                status.success("✅ Deep Audit Completed!")
+                status.success("✅ Deep Audit Completed! Results below in structured table.")
+                
+                # عرض الجدول بشكل احترافي (نفس شكل الصورة الأولى)
+                st.subheader(f"Detailed Compliance Report - {selected_emirate}")
                 st.dataframe(df, use_container_width=True)
 
+                # زر التحميل
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df.to_excel(writer, index=False, sheet_name='Deep_Audit_Results')
+                    df.to_excel(writer, index=False, sheet_name='Audit_Results')
                 
-                st.download_button("📥 Download Report with Prices (Excel)", output.getvalue(), f"Deep_Audit_{selected_emirate}.xlsx")
+                st.download_button("📥 Download Report (Excel)", output.getvalue(), f"Audit_{selected_emirate}.xlsx")
             else:
-                st.error("Data processing failed. Please click 'Run' again to refresh AI connection.")
+                st.error("Format Error: AI did not return a proper table. Please try running the audit again.")
+                st.text_area("Raw Response for Debug:", raw_data)
                 
         except Exception as e:
             st.error(f"Error: {e}")
     else:
-        st.warning("Please upload both documents.")
+        st.warning("Please upload both PDF files.")
