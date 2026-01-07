@@ -4,27 +4,27 @@ import fitz  # PyMuPDF
 from g4f.client import Client
 import io
 
-# 1. إعدادات الصفحة (الحفاظ على الهوية البصرية الداكنة)
+# 1. إعدادات الصفحة (الحفاظ على المظهر الداكن والاحترافي)
 st.set_page_config(page_title="UAE Engineering Auditor Pro", layout="wide", page_icon="🏗️")
 
 lang_data = {
     "English": {
         "sidebar_title": "Control Panel",
         "region_label": "Project Location (Emirate)",
-        "title": "🏗️ Full Technical Compliance & Precise Gap Auditor",
-        "run_btn": "🚀 Run Deep Item-by-Item Audit",
-        "table_header": "Detailed Compliance, Differences & Gaps Report",
-        "down_btn": "📥 Download Full Report (Excel)",
-        "processing": "Analyzing all clauses... comparing Specs vs Offer."
+        "title": "🏗️ Engineering Compliance & Market Analyzer",
+        "run_btn": "🚀 Run Deep Technical Audit",
+        "table_header": "Detailed Technical Compliance & Gap Analysis Report",
+        "down_btn": "📥 Download Report (Excel)",
+        "processing": "Analyzing every clause... ensuring 100% clarity."
     },
     "العربية": {
         "sidebar_title": "لوحة التحكم",
         "region_label": "موقع المشروع (الإمارة)",
-        "title": "🏗️ مدقق المطابقة الفنية وحصر النواقص",
-        "run_btn": "🚀 بدء التدقيق العميق",
-        "table_header": "تقرير تحليل المطابقة الكاملة، الاختلافات، والنواقص",
-        "down_btn": "📥 تحميل التقرير الشامل (Excel)",
-        "processing": "جاري مراجعة كل بند (الموجود والمفقود)... يرجى الانتظار."
+        "title": "🏗️ مدقق المطابقة الهندسي وتحليل السوق",
+        "run_btn": "🚀 بدء التدقيق الفني العميق",
+        "table_header": "تقرير تحليل المطابقة الفنية، الفروقات، والتسعير",
+        "down_btn": "📥 تحميل التقرير التفصيلي (Excel)",
+        "processing": "جاري مراجعة كافة البنود بدقة متناهية... يرجى الانتظار."
     }
 }
 
@@ -49,7 +49,7 @@ st.title(txt["title"])
 
 col1, col2 = st.columns(2)
 with col1:
-    specs_file = st.file_uploader("1. Reference Specs (ملف المواصفات)", type=['pdf'])
+    specs_file = st.file_uploader("1. Reference Specs (المواصفات المرجعية)", type=['pdf'])
 with col2:
     offer_file = st.file_uploader("2. Technical Offer (العرض الفني)", type=['pdf'])
 
@@ -57,7 +57,7 @@ def extract_text(file):
     doc = fitz.open(stream=file.read(), filetype="pdf")
     return " ".join([page.get_text() for page in doc])
 
-# 3. محرك التدقيق (يستخرج المطابق وغير المطابق)
+# 3. محرك التدقيق والتحليل الواضح
 if st.button(txt["run_btn"]):
     if specs_file and offer_file:
         progress_bar = st.progress(0)
@@ -72,45 +72,53 @@ if st.button(txt["run_btn"]):
         
         client = Client()
         
-        # برومبت يركز على استخراج "كل شيء" وتوضيح رقم واسم المواصفة
+        # برومبت يضمن وضوح التحليل وفصل البنود (مطابق + مختلف + مفقود)
         prompt = f"""
-        Act as a Senior UAE Engineering Auditor. 
-        TASK: Compare EVERY Clause in 'Specs' against 'Offer'.
+        Act as a Senior UAE Technical Auditor. Compare EVERY clause from Specs against Offer.
         
-        OUTPUT RULES:
-        1. List BOTH: Items that are found (Compliant) and items that are missing (Not Provided).
-        2. Column 'Clause_Name_No': Extract the exact Number and Title from Specs (e.g., 260519 - Cables).
-        3. Column 'Status': Mark as 'COMPLIANT' if found, 'PARTIAL' if different, or 'STRICTLY MISSING' if absent.
-        4. Column 'Difference_Details': If status is Compliant, write 'Fully Matches'. If not, explain why.
-        5. For ALL items (even missing), provide UAE market alternatives and AED price ranges.
+        REQUIRED TABLE STRUCTURE (Clear & Precise):
+        1. Clause_No: Extract the specific number (e.g., 260519).
+        2. Clause_Name: Extract the technical title (e.g., Low Voltage Cables).
+        3. Status: Must be one of (COMPLIANT, DIFFERENT, MISSING).
+        4. Technical_Comparison: 
+           - If COMPLIANT: Write 'Fully Matches Specs'.
+           - If DIFFERENT: Detail the gap (e.g., brand mismatch, material change).
+           - If MISSING: Write 'Not addressed in the technical offer'.
+        5. UAE_Alternatives: Provide approved brands (e.g., Ducab, Schneider, ABB).
+        6. Market_Price_AED: Estimated price range in UAE market.
+        7. Expert_Recommendation: Precise action for the engineer.
 
-        COLUMNS:
-        Clause_Name_No; Specs_Requirement; Offer_Response; Status; Difference_Details; Best_Alternatives_UAE; Price_Range_AED; Expert_Recommendation.
-
-        Separator: (;)
         Language: {ui_lang}.
+        Formatting: Return ONLY a clean CSV with (;) separator. No markdown code blocks.
         """
         
         try:
-            response = client.chat.completions.create(model="", messages=[{"role": "user", "content": f"{prompt}\nSpecs: {specs_txt}\nOffer: {offer_txt}"}])
+            response = client.chat.completions.create(
+                model="", 
+                messages=[{"role": "user", "content": f"{prompt}\nSpecs Data: {specs_txt}\nOffer Data: {offer_txt}"}]
+            )
             raw_data = response.choices[0].message.content
             
-            if "Clause_Name_No" in raw_data:
-                clean_csv = raw_data[raw_data.find("Clause_Name_No"):].strip()
+            # معالجة البيانات لضمان نظافة الجدول
+            if "Clause_No" in raw_data:
+                clean_csv = raw_data[raw_data.find("Clause_No"):].strip()
                 df = pd.read_csv(io.StringIO(clean_csv), sep=';', on_bad_lines='skip')
+                
+                # حذف أي صفوف فارغة أو مشوهة
+                df.dropna(subset=['Clause_No', 'Status'], inplace=True)
                 
                 progress_bar.progress(100)
                 status_msg.empty()
                 
-                # عرض النتائج بالشكل المعتمد
+                # 4. عرض النتائج (وضوح تام)
                 st.subheader(txt["table_header"])
                 st.dataframe(df, use_container_width=True)
 
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df.to_excel(writer, index=False)
-                st.download_button(txt["down_btn"], output.getvalue(), "Detailed_Engineering_Audit.xlsx")
+                st.download_button(txt["down_btn"], output.getvalue(), "Engineering_Audit_Report.xlsx")
             else:
-                st.error("AI Error: Analysis was not structured correctly. Please try again.")
+                st.error("Format Error: AI output was not clear. Please run the audit again.")
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Error during analysis: {e}")
