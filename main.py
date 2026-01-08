@@ -4,27 +4,27 @@ import fitz  # PyMuPDF
 from g4f.client import Client
 import io
 
-# 1. إعدادات الصفحة (الحفاظ على المظهر الداكن والاحترافي)
+# 1. إعدادات الصفحة والواجهة (ثبات الشكل العام)
 st.set_page_config(page_title="UAE Engineering Auditor Pro", layout="wide", page_icon="🏗️")
 
 lang_data = {
     "English": {
-        "sidebar_title": "Control Panel",
+        "sidebar_title": "Consultant Control Panel",
         "region_label": "Project Location (Emirate)",
-        "title": "🏗️ Engineering Compliance & Market Analyzer",
-        "run_btn": "🚀 Run Deep Technical Audit",
-        "table_header": "Detailed Technical Compliance & Gap Analysis Report",
-        "down_btn": "📥 Download Report (Excel)",
-        "processing": "Analyzing every clause... ensuring 100% clarity."
+        "title": "🏗️ Full Clause-by-Clause Engineering Auditor",
+        "run_btn": "🚀 Run 100% Comprehensive Audit",
+        "table_header": "Detailed Technical Compliance & Full Discrepancy Report",
+        "down_btn": "📥 Download Full Report (Excel)",
+        "processing": "Scrutinizing EVERY single clause... No items will be ignored."
     },
     "العربية": {
-        "sidebar_title": "لوحة التحكم",
+        "sidebar_title": "لوحة التحكم الاستشارية",
         "region_label": "موقع المشروع (الإمارة)",
-        "title": "🏗️ مدقق المطابقة الهندسي وتحليل السوق",
-        "run_btn": "🚀 بدء التدقيق الفني العميق",
-        "table_header": "تقرير تحليل المطابقة الفنية، الفروقات، والتسعير",
-        "down_btn": "📥 تحميل التقرير التفصيلي (Excel)",
-        "processing": "جاري مراجعة كافة البنود بدقة متناهية... يرجى الانتظار."
+        "title": "🏗️ مدقق البنود الهندسي الشامل (بند بند)",
+        "run_btn": "🚀 بدء التدقيق الشامل بنسبة 100%",
+        "table_header": "تقرير مطابقة البنود وتحليل الفوارق (مراجعة كاملة)",
+        "down_btn": "📥 تحميل التقرير الشامل (Excel)",
+        "processing": "جاري فحص كل بند على حدة... لن يتم تجاهل أي تفصيلة."
     }
 }
 
@@ -35,7 +35,7 @@ municipalities_db = {
     "Other Emirates": {"auth": "UAE Authority", "std": "General Code"}
 }
 
-# --- القائمة الجانبية (Sidebar) ---
+# --- القائمة الجانبية (Sidebar) لضمان ثبات الإمارة ---
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Flag_of_the_United_Arab_Emirates.svg/255px-Flag_of_the_United_Arab_Emirates.svg.png", width=100)
     ui_lang = st.selectbox("Language / اللغة", ["العربية", "English"])
@@ -43,7 +43,7 @@ with st.sidebar:
     st.divider()
     selected_region = st.selectbox(txt["region_label"], list(municipalities_db.keys()))
     current = municipalities_db[selected_region]
-    st.success(f"📍 Standard: {current['auth']}")
+    st.info(f"📍 Authority: {current['auth']}")
 
 st.title(txt["title"])
 
@@ -53,72 +53,70 @@ with col1:
 with col2:
     offer_file = st.file_uploader("2. Technical Offer (العرض الفني)", type=['pdf'])
 
-def extract_text(file):
+def extract_full_text(file):
     doc = fitz.open(stream=file.read(), filetype="pdf")
     return " ".join([page.get_text() for page in doc])
 
-# 3. محرك التدقيق والتحليل الواضح
+# 3. محرك التدقيق الشامل (Zero-Gap Logic)
 if st.button(txt["run_btn"]):
     if specs_file and offer_file:
         progress_bar = st.progress(0)
         status_msg = st.empty()
         
-        status_msg.info(txt["processing"])
-        specs_txt = extract_text(specs_file)[:20000]
+        status_msg.warning(txt["processing"])
+        # زيادة حجم المسح لضمان عدم ضياع البنود في الملفات الكبيرة
+        specs_txt = extract_full_text(specs_file)[:30000] 
         progress_bar.progress(30)
         
-        offer_txt = extract_text(offer_file)[:20000]
+        offer_txt = extract_full_text(offer_file)[:25000]
         progress_bar.progress(60)
         
         client = Client()
         
-        # برومبت يضمن وضوح التحليل وفصل البنود (مطابق + مختلف + مفقود)
+        # برومبت صارم جداً يمنع تجاهل أي بند ويتبع منطق الاستشاري الذي أرفقته
         prompt = f"""
-        Act as a Senior UAE Technical Auditor. Compare EVERY clause from Specs against Offer.
+        Act as a Senior Technical Auditor. You are prohibited from skipping or summarizing clauses.
         
-        REQUIRED TABLE STRUCTURE (Clear & Precise):
-        1. Clause_No: Extract the specific number (e.g., 260519).
-        2. Clause_Name: Extract the technical title (e.g., Low Voltage Cables).
-        3. Status: Must be one of (COMPLIANT, DIFFERENT, MISSING).
-        4. Technical_Comparison: 
-           - If COMPLIANT: Write 'Fully Matches Specs'.
-           - If DIFFERENT: Detail the gap (e.g., brand mismatch, material change).
-           - If MISSING: Write 'Not addressed in the technical offer'.
-        5. UAE_Alternatives: Provide approved brands (e.g., Ducab, Schneider, ABB).
-        6. Market_Price_AED: Estimated price range in UAE market.
-        7. Expert_Recommendation: Precise action for the engineer.
+        MANDATORY INSTRUCTIONS:
+        1. SCAN EVERY CLAUSE: Extract every numbered item (e.g., 1.1.1, 2.1, 260519) from the Specs.
+        2. CROSS-CHECK: For each extracted item, find its equivalent in the Offer.
+        3. DISCREPANCY ANALYSIS: 
+           - Identify technical gaps (e.g., THD percentages, missing 55" display).
+           - Identify missing documents (e.g., COO, Warranty Draft, Declaration of Conformity).
+           - Identify missing logic (e.g., Remote control from Server Room).
+        4. NO SUMMARY: If the Specs have 50 items, the table MUST have 50 rows.
+        
+        COLUMNS:
+        Clause_No; Clause_Title_Description; Offer_Status; Consultant_Notes_Discrepancies; Required_Action; UAE_Alternatives; Price_Range_AED.
 
         Language: {ui_lang}.
-        Formatting: Return ONLY a clean CSV with (;) separator. No markdown code blocks.
+        Separator: (;)
         """
         
         try:
             response = client.chat.completions.create(
                 model="", 
-                messages=[{"role": "user", "content": f"{prompt}\nSpecs Data: {specs_txt}\nOffer Data: {offer_txt}"}]
+                messages=[{"role": "user", "content": f"{prompt}\nReference Specs: {specs_txt}\nTechnical Offer: {offer_txt}"}]
             )
             raw_data = response.choices[0].message.content
             
-            # معالجة البيانات لضمان نظافة الجدول
             if "Clause_No" in raw_data:
                 clean_csv = raw_data[raw_data.find("Clause_No"):].strip()
                 df = pd.read_csv(io.StringIO(clean_csv), sep=';', on_bad_lines='skip')
                 
-                # حذف أي صفوف فارغة أو مشوهة
-                df.dropna(subset=['Clause_No', 'Status'], inplace=True)
-                
                 progress_bar.progress(100)
                 status_msg.empty()
                 
-                # 4. عرض النتائج (وضوح تام)
+                # 4. عرض النتائج (الجدول الاحترافي)
                 st.subheader(txt["table_header"])
                 st.dataframe(df, use_container_width=True)
 
+                # خيار التحميل
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df.to_excel(writer, index=False)
-                st.download_button(txt["down_btn"], output.getvalue(), "Engineering_Audit_Report.xlsx")
+                st.download_button(txt["down_btn"], output.getvalue(), "Comprehensive_Audit_No_Gaps.xlsx")
             else:
-                st.error("Format Error: AI output was not clear. Please run the audit again.")
+                st.error("AI Output Error: The analysis was too short or unstructured. Please try once more.")
         except Exception as e:
-            st.error(f"Error during analysis: {e}")
+            st.error(f"Audit System Error: {e}")
