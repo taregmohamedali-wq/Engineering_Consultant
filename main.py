@@ -4,27 +4,37 @@ import fitz  # PyMuPDF
 from g4f.client import Client
 import io
 
-# 1. إعدادات الصفحة والواجهة (ثبات الشكل العام)
+# 1. إعدادات الصفحة والواجهة
 st.set_page_config(page_title="UAE Engineering Auditor Pro", layout="wide", page_icon="🏗️")
+
+# تهيئة ذاكرة الدردشة في حال لم تكن موجودة
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "audit_context" not in st.session_state:
+    st.session_state.audit_context = ""
 
 lang_data = {
     "English": {
         "sidebar_title": "Consultant Control Panel",
         "region_label": "Project Location (Emirate)",
-        "title": "🏗️ Full Clause-by-Clause Engineering Auditor",
+        "title": "🏗️ Full Clause-by-Clause Auditor & AI Agent",
         "run_btn": "🚀 Run 100% Comprehensive Audit",
-        "table_header": "Detailed Technical Compliance & Full Discrepancy Report",
-        "down_btn": "📥 Download Full Report (Excel)",
-        "processing": "Scrutinizing EVERY single clause... No items will be ignored."
+        "table_header": "Detailed Technical Discrepancy Report",
+        "down_btn": "📥 Download Report (Excel)",
+        "chat_title": "💬 Consultant AI Agent (Gemini Logic)",
+        "chat_placeholder": "Ask me about the specs, offer, or discrepancies...",
+        "processing": "Scrutinizing EVERY clause... Acting as Gemini Agent."
     },
     "العربية": {
         "sidebar_title": "لوحة التحكم الاستشارية",
         "region_label": "موقع المشروع (الإمارة)",
-        "title": "🏗️ مدقق البنود الهندسي الشامل (بند بند)",
+        "title": "🏗️ مدقق البنود الشامل والمستشار الذكي",
         "run_btn": "🚀 بدء التدقيق الشامل بنسبة 100%",
-        "table_header": "تقرير مطابقة البنود وتحليل الفوارق (مراجعة كاملة)",
-        "down_btn": "📥 تحميل التقرير الشامل (Excel)",
-        "processing": "جاري فحص كل بند على حدة... لن يتم تجاهل أي تفصيلة."
+        "table_header": "تقرير مطابقة البنود وتحليل الفوارق التفصيلي",
+        "down_btn": "📥 تحميل التقرير (Excel)",
+        "chat_title": "💬 المستشار الهندسي الذكي (منطق جيميناي)",
+        "chat_placeholder": "اسألني عن أي تفاصيل في المواصفات أو العرض أو الفوارق...",
+        "processing": "جاري فحص كل بند... أعمل الآن كمستشار هندسي ذكي."
     }
 }
 
@@ -35,7 +45,6 @@ municipalities_db = {
     "Other Emirates": {"auth": "UAE Authority", "std": "General Code"}
 }
 
-# --- القائمة الجانبية (Sidebar) لضمان ثبات الإمارة ---
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Flag_of_the_United_Arab_Emirates.svg/255px-Flag_of_the_United_Arab_Emirates.svg.png", width=100)
     ui_lang = st.selectbox("Language / اللغة", ["العربية", "English"])
@@ -57,66 +66,68 @@ def extract_full_text(file):
     doc = fitz.open(stream=file.read(), filetype="pdf")
     return " ".join([page.get_text() for page in doc])
 
-# 3. محرك التدقيق الشامل (Zero-Gap Logic)
+# --- محرك التدقيق ---
 if st.button(txt["run_btn"]):
     if specs_file and offer_file:
         progress_bar = st.progress(0)
-        status_msg = st.empty()
-        
-        status_msg.warning(txt["processing"])
-        # زيادة حجم المسح لضمان عدم ضياع البنود في الملفات الكبيرة
-        specs_txt = extract_full_text(specs_file)[:30000] 
-        progress_bar.progress(30)
-        
+        specs_txt = extract_full_text(specs_file)[:30000]
         offer_txt = extract_full_text(offer_file)[:25000]
-        progress_bar.progress(60)
+        
+        # حفظ النصوص في الذاكرة للدردشة لاحقاً
+        st.session_state.audit_context = f"Specs: {specs_txt}\n\nOffer: {offer_txt}"
         
         client = Client()
-        
-        # برومبت صارم جداً يمنع تجاهل أي بند ويتبع منطق الاستشاري الذي أرفقته
-        prompt = f"""
-        Act as a Senior Technical Auditor. You are prohibited from skipping or summarizing clauses.
-        
-        MANDATORY INSTRUCTIONS:
-        1. SCAN EVERY CLAUSE: Extract every numbered item (e.g., 1.1.1, 2.1, 260519) from the Specs.
-        2. CROSS-CHECK: For each extracted item, find its equivalent in the Offer.
-        3. DISCREPANCY ANALYSIS: 
-           - Identify technical gaps (e.g., THD percentages, missing 55" display).
-           - Identify missing documents (e.g., COO, Warranty Draft, Declaration of Conformity).
-           - Identify missing logic (e.g., Remote control from Server Room).
-        4. NO SUMMARY: If the Specs have 50 items, the table MUST have 50 rows.
-        
-        COLUMNS:
-        Clause_No; Clause_Title_Description; Offer_Status; Consultant_Notes_Discrepancies; Required_Action; UAE_Alternatives; Price_Range_AED.
-
-        Language: {ui_lang}.
-        Separator: (;)
-        """
+        prompt = f"""Act as a Senior Technical Auditor. Compare EVERY clause from Specs against Offer. 
+        COLUMNS: Clause_No; Clause_Title_Description; Offer_Status; Consultant_Notes_Discrepancies; Required_Action; UAE_Alternatives; Price_Range_AED.
+        Language: {ui_lang}. Separator: (;)"""
         
         try:
-            response = client.chat.completions.create(
-                model="", 
-                messages=[{"role": "user", "content": f"{prompt}\nReference Specs: {specs_txt}\nTechnical Offer: {offer_txt}"}]
-            )
+            response = client.chat.completions.create(model="", messages=[{"role": "user", "content": f"{prompt}\nSpecs: {specs_txt}\nOffer: {offer_txt}"}])
             raw_data = response.choices[0].message.content
-            
             if "Clause_No" in raw_data:
                 clean_csv = raw_data[raw_data.find("Clause_No"):].strip()
                 df = pd.read_csv(io.StringIO(clean_csv), sep=';', on_bad_lines='skip')
-                
-                progress_bar.progress(100)
-                status_msg.empty()
-                
-                # 4. عرض النتائج (الجدول الاحترافي)
-                st.subheader(txt["table_header"])
-                st.dataframe(df, use_container_width=True)
-
-                # خيار التحميل
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df.to_excel(writer, index=False)
-                st.download_button(txt["down_btn"], output.getvalue(), "Comprehensive_Audit_No_Gaps.xlsx")
+                st.session_state.report_df = df
+                st.success("Audit Completed!")
             else:
-                st.error("AI Output Error: The analysis was too short or unstructured. Please try once more.")
+                st.error("Audit data error.")
         except Exception as e:
-            st.error(f"Audit System Error: {e}")
+            st.error(f"Error: {e}")
+
+# --- عرض الجدول إذا كان موجوداً ---
+if "report_df" in st.session_state:
+    st.subheader(txt["table_header"])
+    st.dataframe(st.session_state.report_df, use_container_width=True)
+
+# --- قسم الدردشة والمناقشة (AI Consultant Agent) ---
+st.divider()
+st.subheader(txt["chat_title"])
+
+# عرض تاريخ الدردشة
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# إدخال سؤال جديد من المستخدم
+if user_input := st.chat_input(txt["chat_placeholder"]):
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    # توليد الرد من المستشار (Gemini Logic)
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            client = Client()
+            # إرسال سياق التدقيق مع سؤال المستخدم
+            system_instruction = f"You are Gemini, a Senior Engineering Consultant in the UAE. Use the following context to answer precisely: {st.session_state.audit_context[:10000]}"
+            
+            chat_response = client.chat.completions.create(
+                model="",
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    *st.session_state.chat_history
+                ]
+            )
+            reply = chat_response.choices[0].message.content
+            st.markdown(reply)
+            st.session_state.chat_history.append({"role": "assistant", "content": reply})
