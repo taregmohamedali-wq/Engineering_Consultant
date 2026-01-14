@@ -19,7 +19,7 @@ lang_data = {
     "English": {
         "sidebar_title": "Consultant Control Panel",
         "region_label": "Project Location (Emirate)",
-        "title": "🏗️ Full Clause Auditor & AI Agent (Gemini Logic)",
+        "title": "🏗️  Auditor & AI Agent ",
         "run_btn": "🚀 Run 100% Comprehensive Audit",
         "table_header": "Technical Discrepancy & Gap Analysis",
         "chat_header": "💬 Chat with your Technical Consultant (Linked to Files)",
